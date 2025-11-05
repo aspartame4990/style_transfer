@@ -129,7 +129,7 @@ def stylize(args):
         device = torch.accelerator.current_accelerator()
     else:
         device = torch.device("cpu")
-    
+
     print(f"Using device: {device}")
 
     content_image = utils.load_image(args.content_image, scale=args.content_scale)
@@ -140,52 +140,25 @@ def stylize(args):
     content_image = content_transform(content_image)
     content_image = content_image.unsqueeze(0).to(device)
 
-    if args.model.endswith(".onnx"):
-        output = stylize_onnx(content_image, args)
-    else:
-        with torch.no_grad():
-            style_model = TransformerNet()
-            state_dict = torch.load(args.model)
-            # remove saved deprecated running_* keys in InstanceNorm from the checkpoint
-            for k in list(state_dict.keys()):
-                if re.search(r'in\d+\.running_(mean|var)$', k):
-                    del state_dict[k]
-            style_model.load_state_dict(state_dict)
-            style_model.to(device)
-            style_model.eval()
-            if args.export_onnx:
-                assert args.export_onnx.endswith(".onnx"), "Export model file should end with .onnx"
-                output = torch.onnx._export(
-                    style_model, content_image, args.export_onnx, opset_version=11,
-                ).cpu()            
-            else:
-                output = style_model(content_image).cpu()
+    with torch.no_grad():
+        style_model = TransformerNet()
+        state_dict = torch.load(args.model)
+        # remove saved deprecated running_* keys in InstanceNorm from the checkpoint
+        for k in list(state_dict.keys()):
+            if re.search(r'in\d+\.running_(mean|var)$', k):
+                del state_dict[k]
+        style_model.load_state_dict(state_dict)
+        style_model.to(device)
+        style_model.eval()
+        if args.export_onnx:
+            assert args.export_onnx.endswith(".onnx"), "Export model file should end with .onnx"
+            output = torch.onnx._export(
+                style_model, content_image, args.export_onnx, opset_version=11,
+            ).cpu()
+        else:
+            output = style_model(content_image).cpu()
+
     utils.save_image(args.output_image, output[0])
-
-
-def stylize_onnx(content_image, args):
-    """
-    Read ONNX model and run it using onnxruntime
-    """
-
-    assert not args.export_onnx
-
-    import onnxruntime
-
-    ort_session = onnxruntime.InferenceSession(args.model)
-
-    def to_numpy(tensor):
-        return (
-            tensor.detach().cpu().numpy()
-            if tensor.requires_grad
-            else tensor.cpu().numpy()
-        )
-
-    ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(content_image)}
-    ort_outs = ort_session.run(None, ort_inputs)
-    img_out_y = ort_outs[0]
-
-    return torch.from_numpy(img_out_y)
 
 
 def main():
@@ -200,11 +173,11 @@ def main():
     train_arg_parser.add_argument("--dataset", type=str, required=True,
                                   help="path to training dataset, the path should point to a folder "
                                        "containing another folder with all the training images")
-    train_arg_parser.add_argument("--style-image", type=str, default="datasets/styles/mosaic.jpg",
+    train_arg_parser.add_argument("--style-image", type=str, default="../datasets/styles/mosaic.jpg",
                                   help="path to style-image")
-    train_arg_parser.add_argument("--save-model-dir", type=str, required=True,
+    train_arg_parser.add_argument("--save-model-dir", type=str, default="../trained_models",
                                   help="path to folder where trained model will be saved.")
-    train_arg_parser.add_argument("--checkpoint-model-dir", type=str, default=None,
+    train_arg_parser.add_argument("--checkpoint-model-dir", type=str, default="../checkpoints",
                                   help="path to folder where checkpoints of trained models will be saved")
     train_arg_parser.add_argument("--image-size", type=int, default=256,
                                   help="size of training images, default is 256 X 256")
@@ -254,7 +227,10 @@ def main():
         check_paths(args)
         train(args)
     else:
+        start = time.perf_counter()
         stylize(args)
+        end = time.perf_counter()
+        print(f"Time used: {(end - start):.3f} seconds")
 
 
 if __name__ == "__main__":
