@@ -110,8 +110,8 @@ def train(args):
             if (batch_id + 1) % args.log_interval == 0:
                 mesg = "{}\tEpoch {}:\t[{}/{}]\tcontent: {:.6f}\tstyle: {:.6f}\ttotal: {:.6f}".format(
                     time.ctime(), e + 1, count, len(train_dataset),
-                                  avg_content_loss,
-                                  avg_style_loss,
+                    avg_content_loss,
+                    avg_style_loss,
                                   (agg_content_loss + agg_style_loss) / (batch_id + 1)
                 )
                 progress_bar.write(mesg)
@@ -141,8 +141,9 @@ def stylize(args):
 
     print(f"Using device: {device}")
 
-    content_image = utils.load_image(args.content_image, scale=args.content_scale)
+    content_image = utils.load_image(args.content_image)
     content_transform = transforms.Compose([
+        transforms.Resize(args.image_size),
         transforms.ToTensor(),
         transforms.Lambda(lambda x: x.mul(255))
     ])
@@ -182,7 +183,7 @@ def main():
     train_arg_parser.add_argument("--dataset", type=str, default="../datasets",
                                   help="path to training dataset, the path should point to a folder "
                                        "containing another folder with all the training images")
-    train_arg_parser.add_argument("--style-image", type=str, default="../styles/mosaic.jpg",
+    train_arg_parser.add_argument("--style-image", type=str, required=True,
                                   help="path to style-image")
     train_arg_parser.add_argument("--save-model-dir", type=str, default="../trained_models",
                                   help="path to folder where trained model will be saved.")
@@ -210,8 +211,8 @@ def main():
     eval_arg_parser = subparsers.add_parser("eval", help="parser for evaluation/stylizing arguments")
     eval_arg_parser.add_argument("--content-image", type=str, required=True,
                                  help="path to content image you want to stylize")
-    eval_arg_parser.add_argument("--content-scale", type=float, default=None,
-                                 help="factor for scaling down the content image")
+    eval_arg_parser.add_argument("--image-size", type=int, default=720,
+                                 help="size of image to stylize, default is 720p")
     eval_arg_parser.add_argument("--output-image", type=str, required=True,
                                  help="path for saving the output image")
     eval_arg_parser.add_argument("--model", type=str, required=True,
