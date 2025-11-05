@@ -4,3 +4,7 @@
 .code/
 .venv/
 saved_models/
+saved_models.zip
+out/
+checkpoints/
+trained_models/
