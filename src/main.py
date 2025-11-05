@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets
 from torchvision import transforms
 import torch.onnx
+from tqdm import tqdm
 
 import utils
 from transformer_net import TransformerNet
@@ -69,7 +70,8 @@ def train(args):
         agg_content_loss = 0.
         agg_style_loss = 0.
         count = 0
-        for batch_id, (x, _) in enumerate(train_loader):
+        progress_bar = tqdm(train_loader, desc=f"Epoch {e + 1}/{args.epochs}", leave=False)
+        for batch_id, (x, _) in enumerate(progress_bar):
             n_batch = len(x)
             count += n_batch
             optimizer.zero_grad()
@@ -97,15 +99,22 @@ def train(args):
 
             agg_content_loss += content_loss.item()
             agg_style_loss += style_loss.item()
+            avg_content_loss = agg_content_loss / (batch_id + 1)
+            avg_style_loss = agg_style_loss / (batch_id + 1)
+            progress_bar.set_postfix(
+                content=avg_content_loss,
+                style=avg_style_loss,
+                total=avg_content_loss + avg_style_loss
+            )
 
             if (batch_id + 1) % args.log_interval == 0:
                 mesg = "{}\tEpoch {}:\t[{}/{}]\tcontent: {:.6f}\tstyle: {:.6f}\ttotal: {:.6f}".format(
                     time.ctime(), e + 1, count, len(train_dataset),
-                                  agg_content_loss / (batch_id + 1),
-                                  agg_style_loss / (batch_id + 1),
+                                  avg_content_loss,
+                                  avg_style_loss,
                                   (agg_content_loss + agg_style_loss) / (batch_id + 1)
                 )
-                print(mesg)
+                progress_bar.write(mesg)
 
             if args.checkpoint_model_dir is not None and (batch_id + 1) % args.checkpoint_interval == 0:
                 transformer.eval().cpu()
@@ -170,10 +179,10 @@ def main():
                                   help="number of training epochs, default is 2")
     train_arg_parser.add_argument("--batch-size", type=int, default=4,
                                   help="batch size for training, default is 4")
-    train_arg_parser.add_argument("--dataset", type=str, required=True,
+    train_arg_parser.add_argument("--dataset", type=str, default="../datasets",
                                   help="path to training dataset, the path should point to a folder "
                                        "containing another folder with all the training images")
-    train_arg_parser.add_argument("--style-image", type=str, default="../datasets/styles/mosaic.jpg",
+    train_arg_parser.add_argument("--style-image", type=str, default="../styles/mosaic.jpg",
                                   help="path to style-image")
     train_arg_parser.add_argument("--save-model-dir", type=str, default="../trained_models",
                                   help="path to folder where trained model will be saved.")

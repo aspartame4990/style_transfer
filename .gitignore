@@ -3,7 +3,6 @@
 .vscode/
 .code/
 .venv/
-saved_models/
+datasets/
 out/
 checkpoints/
-trained_models/
