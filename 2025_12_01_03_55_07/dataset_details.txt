@@ -1,6 +1,0 @@
-Total number of images: 5000
---- Dataset split details (record these numbers in the report) ---
-🔹 Training set (for training): 4455 images
-🔸 Validation set (for plotting the loss curve): 495 images
-🚀 Test set (for the final showcase): 50 images
-

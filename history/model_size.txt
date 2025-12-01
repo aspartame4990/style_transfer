@@ -1,0 +1,7 @@
+📊 Baseline Model Parameters: 1,679,235
+🚀 Lightweight-V1 Model Parameters: 381,315
+📉 Reduction: 77.29%
+🚀 Lightweight-V2 Model Parameters: 292,796
+📉 Reduction: 82.56%
+🚀 Lightweight-V3 Model Parameters: 207,865
+📉 Reduction: 87.62%
